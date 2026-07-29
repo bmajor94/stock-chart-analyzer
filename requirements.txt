@@ -1,0 +1,7 @@
+# 검증 범위: Python 3.9~3.14 / pandas 2.3~3.0 / numpy 2.0~2.5
+# 두 조합에서 지표 계산값이 동일한 것을 확인했다.
+streamlit>=1.60
+yfinance>=1.2
+pandas>=2.2
+numpy>=1.26
+plotly>=6.0

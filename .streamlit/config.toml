@@ -1,0 +1,7 @@
+# 포트는 여기 고정하지 않는다. Streamlit Cloud 는 자체 포트를 쓰고,
+# 로컬 런처는 --server.port 로 직접 넘긴다.
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"
