@@ -14,12 +14,6 @@ NEGATIVE = "부정"
 NEUTRAL = "판단 불가"
 
 
-def _cmp(value, ref, pos_text: str, neg_text: str) -> tuple[str, str]:
-    if pd.isna(value) or pd.isna(ref):
-        return NEUTRAL, "값이 아직 계산되지 않음"
-    return (POSITIVE, pos_text) if value >= ref else (NEGATIVE, neg_text)
-
-
 def evaluate(df: pd.DataFrame, rsi_col: str) -> dict:
     """8개 조건을 집계해 종합 판독과 근거 목록을 돌려준다."""
     last = df.iloc[-1]
@@ -29,9 +23,14 @@ def evaluate(df: pd.DataFrame, rsi_col: str) -> dict:
     def add(name: str, verdict: str, reason: str) -> None:
         checks.append({"조건": name, "판정": verdict, "근거": reason})
 
-    # 1~3. 종가와 각 이동평균의 위치
+    # 1~3. 종가와 각 이동평균의 위치.
+    # 종가가 없으면 비교 자체가 성립하지 않는다. 그냥 두면 NaN 비교가 False 로
+    # 떨어져 세 항목이 조용히 '부정'으로 집계되므로 반드시 걸러낸다.
     for col, label in (("SMA20", "단기 추세"), ("SMA50", "중기 추세"), ("SMA200", "장기 추세")):
         val = last.get(col)
+        if pd.isna(close):
+            add(label, NEUTRAL, "종가가 없어 비교할 수 없음")
+            continue
         if pd.isna(val):
             add(label, NEUTRAL, f"{col} 아직 계산 안 됨 (조회 기간 부족)")
             continue

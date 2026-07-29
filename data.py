@@ -46,7 +46,20 @@ def fetch(
     if missing:
         raise ValueError(f"'{ticker}' 응답에 {missing} 컬럼이 없습니다.")
 
-    df = df[OHLCV].dropna(how="all")
+    df = df[OHLCV]
+
+    # 종가 없는 봉은 봉이 아니다. Yahoo 가 요청을 막을 때 형태만 갖추고 값은
+    # 전부 NaN 인 응답을 주는데, df.empty 검사만으로는 이걸 걸러내지 못해
+    # 화면에 'nan' 이 그대로 찍힌다.
+    df = df[df["Close"].notna()]
+
+    if df.empty:
+        raise ValueError(
+            f"'{ticker}' 응답에 유효한 가격이 없습니다. "
+            "Yahoo 가 일시적으로 요청을 거부했을 수 있습니다. "
+            "잠시 뒤 '데이터 새로고침'을 눌러 보세요."
+        )
+
     df.index = pd.to_datetime(df.index)
     return df
 

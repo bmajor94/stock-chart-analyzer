@@ -15,6 +15,9 @@ def _pct(a: float, b: float) -> float:
 
 def _trend(last: pd.Series) -> tuple[str, list[str]]:
     close = last["Close"]
+    if pd.isna(close):
+        return "판단 불가", ["종가가 없어 이동평균과 비교할 수 없습니다."]
+
     lines: list[str] = []
     above = 0
     total = 0

@@ -55,6 +55,11 @@ def search_tickers(query: str) -> list[dict]:
     return tk_mod.search(query)
 
 
+def fmt(v, spec: str = ",.2f") -> str:
+    """NaN 을 화면에 'nan' 으로 흘리지 않는다. 값이 없으면 —."""
+    return "—" if v is None or pd.isna(v) else format(v, spec)
+
+
 def detected_mode() -> str:
     """스트림릿이 실제로 그리고 있는 테마(light/dark)를 알아낸다."""
     try:
@@ -229,27 +234,28 @@ caption.append(f"최종 {df.index[-1]:%Y-%m-%d %H:%M}" if interval.endswith(("m"
 st.caption(" · ".join(caption))
 
 change = last["Close"] - prev["Close"]
-pct = change / prev["Close"] * 100 if prev["Close"] else 0.0
+pct = change / prev["Close"] * 100 if prev["Close"] else float("nan")
+delta = (
+    None
+    if pd.isna(change) or pd.isna(pct)
+    else f"{change:+,.2f} ({pct:+.2f}%)"
+)
 
 m1, m2, m3, m4 = st.columns(4)
-m1.metric(
-    f"종가 ({currency})",
-    f"{last['Close']:,.2f}",
-    f"{change:+,.2f} ({pct:+.2f}%)",
-)
+m1.metric(f"종가 ({currency})", fmt(last["Close"]), delta)
 m2.metric(
     rsi_label,
-    "—" if pd.isna(last[rsi_col]) else f"{last[rsi_col]:.1f}",
+    fmt(last[rsi_col], ".1f"),
     help="0~100. 관례적으로 70 위는 과매수, 30 아래는 과매도 구간으로 부릅니다.",
 )
 m3.metric(
     "MACD 히스토그램",
-    "—" if pd.isna(last["MACD_HIST"]) else f"{last['MACD_HIST']:+.2f}",
+    fmt(last["MACD_HIST"], "+.2f"),
     help="MACD선 − 시그널선. 양수면 MACD선이 시그널선 위에 있습니다.",
 )
 m4.metric(
     "볼린저 %B",
-    "—" if pd.isna(last["BB_PERCENT_B"]) else f"{last['BB_PERCENT_B']:.2f}",
+    fmt(last["BB_PERCENT_B"], ".2f"),
     help="1.0 = 상단 밴드, 0.0 = 하단 밴드.",
 )
 
@@ -342,7 +348,7 @@ if show_signals and found is not None:
         recent["시점"] = recent["시각"].dt.strftime(
             "%Y-%m-%d %H:%M" if data.is_intraday(interval) else "%Y-%m-%d"
         )
-        recent["그때 종가"] = recent["가격"].map(lambda v: f"{v:,.2f}")
+        recent["그때 종가"] = recent["가격"].map(fmt)
         recent["뜻"] = recent["kind"].map(sig_mod.DESCRIPTION)
         st.dataframe(
             recent[["시점", "이름", "그때 종가", "뜻"]],
@@ -357,11 +363,6 @@ if show_signals and found is not None:
 
 # ─────────────────────── 지표 현황 요약 ───────────────────────
 st.subheader("최근 봉 지표값")
-
-
-def fmt(v, spec: str = ",.2f") -> str:
-    return "—" if pd.isna(v) else format(v, spec)
-
 
 vol_ma_label = f"거래량 MA {int(vol_ma_window)}"
 
