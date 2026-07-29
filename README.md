@@ -18,6 +18,20 @@
 
 앱이 켜져 있는 동안에는 같은 와이파이의 폰·태블릿에서도 터미널 창에 찍힌 **Network URL** 로 접속된다.
 
+### 웹에 올리기 (Streamlit Community Cloud)
+
+무료로 배포하면 맥을 꺼도 폰에서 열린다. **무료 플랜의 앱은 공개된다** — 주소를 아는 사람은 누구나 접속할 수 있다. 이 앱은 공개 시세만 다루고 저장하는 개인정보가 없다.
+
+1. 이 폴더를 GitHub 저장소로 올린다.
+2. [share.streamlit.io](https://share.streamlit.io) 에 GitHub 계정으로 로그인한다.
+3. **New app** → 저장소와 브랜치를 고르고 Main file 에 `app.py` 를 넣는다.
+4. Advanced settings 에서 Python 3.12 또는 3.13 을 고른다.
+5. Deploy 를 누르면 몇 분 뒤 `https://<이름>.streamlit.app` 주소가 나온다.
+
+`requirements.txt` 가 저장소 루트에 있어야 하고, 이미 있다. 버전은 하한만 걸어 뒀다 — Python 3.9~3.14 / pandas 2.3~3.0 두 조합에서 지표 계산값이 동일한 것을 확인했으므로 클라우드가 어떤 버전을 깔아도 결과는 같다.
+
+`.streamlit/config.toml` 에 포트를 고정하지 않은 이유도 이것이다. 클라우드는 자체 포트를 쓰고, 로컬 런처만 `--server.port` 로 넘긴다.
+
 ### 런처가 headless 로 띄우는 이유
 
 그냥 `streamlit run` 하면 첫 실행 때 이메일을 물어보며 입력 대기 상태로 멈춘다. 더블클릭 실행에서는 그게 그대로 먹통으로 보이므로, `--server.headless true` 로 띄우고 브라우저는 스크립트가 `open` 으로 직접 연다.
