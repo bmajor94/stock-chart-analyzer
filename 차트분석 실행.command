@@ -38,7 +38,13 @@ fi
 echo "──────────────────────────────────────────"
 echo "  차트 지표 분석"
 echo
-echo "  잠시 후 브라우저가 자동으로 열립니다."
+echo "  이 맥            $URL"
+
+# Tailscale 이 켜져 있으면 폰·친구가 쓸 주소도 같이 알려준다
+ts_ip=$(tailscale ip -4 2>/dev/null | head -1)
+[ -n "$ts_ip" ] && echo "  폰·친구        http://$ts_ip:$PORT"
+
+echo
 echo "  끄려면 이 창을 닫거나 Control-C 를 누르세요."
 echo "──────────────────────────────────────────"
 echo
