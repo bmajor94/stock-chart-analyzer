@@ -258,11 +258,13 @@ def metric_row() -> None:
     m1, m2, m3, m4 = cols[0], cols[-3], cols[-2], cols[-1]
 
     if live:
-        gap = live["가격"] - live["기준"] if live["기준"] else None
+        # 기준은 옆 칸에 떠 있는 차트 종가. 두 숫자가 서로 맞아떨어져야 한다.
+        base = last["Close"]
+        gap = live["가격"] - base if not pd.isna(base) and base else None
         cols[1].metric(
             f"현재가 · {live['장상태']}",
             fmt(live["가격"]),
-            None if gap is None else f"{gap:+,.2f} ({gap / live['기준'] * 100:+.2f}%)",
+            None if gap is None else f"{gap:+,.2f} ({gap / base * 100:+.2f}%)",
             help="차트 마지막 봉 이후의 최신 체결가입니다. 시간외 체결도 포함합니다.",
         )
         cols[1].caption(f"{datetime.now():%H:%M:%S} 갱신")
