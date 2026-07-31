@@ -129,9 +129,12 @@ def search(query: str, limit: int = 8) -> list[dict]:
     query = query.strip()
     if not query:
         return []
-    try:
-        quotes = yf.Search(query, max_results=limit).quotes or []
-    except Exception:
+    from data import _bounded  # 같은 타임아웃 정책을 쓴다
+
+    quotes = _bounded(
+        lambda: yf.Search(query, max_results=limit).quotes or [], seconds=8, default=None
+    )
+    if not quotes:
         return []
 
     out = []

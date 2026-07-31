@@ -2,10 +2,26 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
+
 import pandas as pd
 import yfinance as yf
 
 OHLCV = ["Open", "High", "Low", "Close", "Volume"]
+
+# Yahoo 가 응답을 안 주면 호출이 무한정 매달린다. 로컬에선 티가 안 나지만
+# 클라우드에서는 페이지 전체가 회색으로 멈춘 채 끝나지 않는다.
+_POOL = ThreadPoolExecutor(max_workers=4)
+
+
+def _bounded(fn, seconds: float, default):
+    """제한 시간 안에 못 끝내면 포기한다. 없는 값이 멈춘 화면보다 낫다."""
+    # ponytail: 시간 초과해도 스레드는 남는다. 요청이 끝나면 알아서 정리된다.
+    #           문제가 되면 세션 단위 취소로 바꾼다.
+    try:
+        return _POOL.submit(fn).result(timeout=seconds)
+    except Exception:
+        return default
 
 
 def is_intraday(interval: str) -> bool:
@@ -34,6 +50,7 @@ def fetch(
         progress=False,
         threads=False,
         prepost=prepost and is_intraday(interval),
+        timeout=20,
     )
 
     if df is None or df.empty:
@@ -105,9 +122,8 @@ MARKET_STATE = {
 
 def quote(ticker: str) -> dict:
     """차트 밖의 최신 체결가. 일봉은 정규장만 담으므로 시간외 움직임은 여기서만 보인다."""
-    try:
-        i = yf.Ticker(ticker).info or {}
-    except Exception:
+    i = _bounded(lambda: yf.Ticker(ticker).info or {}, seconds=8, default=None)
+    if not i:
         return {}
 
     state = i.get("marketState") or ""
@@ -134,9 +150,8 @@ def quote(ticker: str) -> dict:
 
 def profile(ticker: str) -> dict:
     """종목명·거래소·통화 등 표시용 메타데이터. 실패해도 예외를 던지지 않는다."""
-    try:
-        info = yf.Ticker(ticker).info or {}
-    except Exception:
+    info = _bounded(lambda: yf.Ticker(ticker).info or {}, seconds=8, default=None)
+    if not info:
         return {}
     return {
         "name": info.get("longName") or info.get("shortName") or "",
