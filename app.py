@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 import pandas as pd
 import streamlit as st
 
@@ -50,7 +52,8 @@ def load_profile(ticker: str) -> dict:
     return data.profile(ticker)
 
 
-@st.cache_data(ttl=30, show_spinner=False)
+# 갱신 주기(30초)보다 짧아야 매번 새 값을 받는다
+@st.cache_data(ttl=20, show_spinner=False)
 def load_quote(ticker: str) -> dict:
     return data.quote(ticker)
 
@@ -246,36 +249,43 @@ delta = (
     else f"{change:+,.2f} ({pct:+.2f}%)"
 )
 
-live = load_quote(ticker)
+@st.fragment(run_every="30s")
+def metric_row() -> None:
+    """30초마다 이 블록만 다시 그린다. 차트와 지표는 다시 계산하지 않는다."""
+    live = load_quote(ticker)
 
-cols = st.columns(5 if live else 4)
-m1, m2, m3, m4 = cols[0], cols[-3], cols[-2], cols[-1]
+    cols = st.columns(5 if live else 4)
+    m1, m2, m3, m4 = cols[0], cols[-3], cols[-2], cols[-1]
 
-if live:
-    gap = live["가격"] - live["기준"] if live["기준"] else None
-    cols[1].metric(
-        f"현재가 · {live['장상태']}",
-        fmt(live["가격"]),
-        None if gap is None else f"{gap:+,.2f} ({gap / live['기준'] * 100:+.2f}%)",
-        help="차트 마지막 봉 이후의 최신 체결가입니다. 시간외 체결도 포함합니다.",
+    if live:
+        gap = live["가격"] - live["기준"] if live["기준"] else None
+        cols[1].metric(
+            f"현재가 · {live['장상태']}",
+            fmt(live["가격"]),
+            None if gap is None else f"{gap:+,.2f} ({gap / live['기준'] * 100:+.2f}%)",
+            help="차트 마지막 봉 이후의 최신 체결가입니다. 시간외 체결도 포함합니다.",
+        )
+        cols[1].caption(f"{datetime.now():%H:%M:%S} 갱신")
+
+    m1.metric(f"종가 ({currency})", fmt(last["Close"]), delta)
+    m2.metric(
+        rsi_label,
+        fmt(last[rsi_col], ".1f"),
+        help="0~100. 관례적으로 70 위는 과매수, 30 아래는 과매도 구간으로 부릅니다.",
+    )
+    m3.metric(
+        "MACD 히스토그램",
+        fmt(last["MACD_HIST"], "+.2f"),
+        help="MACD선 − 시그널선. 양수면 MACD선이 시그널선 위에 있습니다.",
+    )
+    m4.metric(
+        "볼린저 %B",
+        fmt(last["BB_PERCENT_B"], ".2f"),
+        help="1.0 = 상단 밴드, 0.0 = 하단 밴드.",
     )
 
-m1.metric(f"종가 ({currency})", fmt(last["Close"]), delta)
-m2.metric(
-    rsi_label,
-    fmt(last[rsi_col], ".1f"),
-    help="0~100. 관례적으로 70 위는 과매수, 30 아래는 과매도 구간으로 부릅니다.",
-)
-m3.metric(
-    "MACD 히스토그램",
-    fmt(last["MACD_HIST"], "+.2f"),
-    help="MACD선 − 시그널선. 양수면 MACD선이 시그널선 위에 있습니다.",
-)
-m4.metric(
-    "볼린저 %B",
-    fmt(last["BB_PERCENT_B"], ".2f"),
-    help="1.0 = 상단 밴드, 0.0 = 하단 밴드.",
-)
+
+metric_row()
 
 # ─────────────────────── 종합 판독 ───────────────────────
 verdict = score_mod.evaluate(df, rsi_col)
