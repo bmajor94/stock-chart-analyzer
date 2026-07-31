@@ -93,6 +93,45 @@ def session_hours(interval: str, prepost: bool) -> tuple[float, float] | None:
     return (4.0, 20.0) if prepost else (9.5, 16.0)
 
 
+MARKET_STATE = {
+    "REGULAR": "정규장",
+    "PRE": "프리마켓",
+    "PREPRE": "장 시작 전",
+    "POST": "애프터마켓",
+    "POSTPOST": "장 마감 후",
+    "CLOSED": "휴장",
+}
+
+
+def quote(ticker: str) -> dict:
+    """차트 밖의 최신 체결가. 일봉은 정규장만 담으므로 시간외 움직임은 여기서만 보인다."""
+    try:
+        i = yf.Ticker(ticker).info or {}
+    except Exception:
+        return {}
+
+    state = i.get("marketState") or ""
+    regular = i.get("regularMarketPrice")
+
+    # 시간외 가격이 있으면 그게 가장 최근 체결가다. 기준선은 그날 정규장 종가.
+    pre, post = i.get("preMarketPrice"), i.get("postMarketPrice")
+    if state.startswith("PRE") and pre is not None:
+        price, base = pre, regular
+    elif post is not None:
+        price, base = post, regular
+    else:
+        price, base = regular, i.get("regularMarketPreviousClose")
+
+    if price is None:
+        return {}
+    return {
+        "가격": price,
+        "기준": base,
+        "장상태": MARKET_STATE.get(state, state or "—"),
+        "시간외": price is not regular,
+    }
+
+
 def profile(ticker: str) -> dict:
     """종목명·거래소·통화 등 표시용 메타데이터. 실패해도 예외를 던지지 않는다."""
     try:

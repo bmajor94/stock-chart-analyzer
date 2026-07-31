@@ -50,6 +50,11 @@ def load_profile(ticker: str) -> dict:
     return data.profile(ticker)
 
 
+@st.cache_data(ttl=30, show_spinner=False)
+def load_quote(ticker: str) -> dict:
+    return data.quote(ticker)
+
+
 @st.cache_data(ttl=3600, show_spinner=False)
 def search_tickers(query: str) -> list[dict]:
     return tk_mod.search(query)
@@ -241,7 +246,20 @@ delta = (
     else f"{change:+,.2f} ({pct:+.2f}%)"
 )
 
-m1, m2, m3, m4 = st.columns(4)
+live = load_quote(ticker)
+
+cols = st.columns(5 if live else 4)
+m1, m2, m3, m4 = cols[0], cols[-3], cols[-2], cols[-1]
+
+if live:
+    gap = live["가격"] - live["기준"] if live["기준"] else None
+    cols[1].metric(
+        f"현재가 · {live['장상태']}",
+        fmt(live["가격"]),
+        None if gap is None else f"{gap:+,.2f} ({gap / live['기준'] * 100:+.2f}%)",
+        help="차트 마지막 봉 이후의 최신 체결가입니다. 시간외 체결도 포함합니다.",
+    )
+
 m1.metric(f"종가 ({currency})", fmt(last["Close"]), delta)
 m2.metric(
     rsi_label,
